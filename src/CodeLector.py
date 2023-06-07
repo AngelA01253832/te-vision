@@ -2,11 +2,15 @@
 import cv2
 import json
 from pyzbar import pyzbar
+from time import sleep
 
 class Reader:
-    def __init__(self) -> None:
+    def __init__(self, callback= None) -> None:
         self.contentList = []
         self.readCodes = set()
+        self.isCodeReaded = False
+        self.callback = callback
+        self.isRunning = True
         
     def scanner(self, frame):
         codes = pyzbar.decode(frame)
@@ -22,24 +26,47 @@ class Reader:
                 content = json.loads(code_info)
                 #print(content)
                 self.contentList.append(content)
+                self.isCodeReaded = True
+
+                if self.callback is not None:
+                    self.callback(content)
+        if len(codes) == 0:
+            self.isCodeReaded = False
             
         return frame
     def realTime(self):
         camera = cv2.VideoCapture(0)
-        ret, frame = camera.read()
-        while ret:
+        while self.isRunning:
             ret, frame = camera.read()
             frame = self.scanner(frame)
             cv2.imshow('Barcode reader', frame)
             if cv2.waitKey(1) & 0xFF == 27:
+                self.stop()
+
+            if not self.isRunning:
                 break
+ 
         camera.release()
         cv2.destroyAllWindows()
     def getContentList(self):
         return self.contentList
+    def stop(self):
+        self.isRunning = False
 
-qrcode = Reader()
-qrcode.realTime()
+state = False 
 
-content_list = qrcode.getContentList()
-print(content_list)
+def visionCallback(content):
+    global state 
+    print(f"State:1 {state}")    
+    print(f"QR detected, Content:{content}")
+    state = True
+    print(f"State:2 {state}")    
+    sleep(1)  
+    state = False
+    print(f"State:3 {state}")
+
+# qrcode = Reader(visionCallback)
+# qrcode.realTime()
+
+# content_list = qrcode.getContentList()
+# print(content_list)
