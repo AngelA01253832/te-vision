@@ -16,3 +16,5 @@ python -m virtualenv venv
 ```
 pip install -r "./requirements.txt"
 ```
+
+5.-Rename .envTemplate to .env
