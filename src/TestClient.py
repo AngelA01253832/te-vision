@@ -2,9 +2,11 @@ from opcua import Client
 from time import sleep
 from CodeLector import Reader
 import threading
+from decouple import config
+
 import asyncio
 
-client = Client("opc.tcp://localhost:4840")
+client = Client(config('OPC_ENDPOINT'))
 
 class DataChangeHandler(object):
     def __init__(self):
@@ -13,7 +15,7 @@ class DataChangeHandler(object):
         self.isBoxReaded : bool = False
         self.reader = Reader()
         self.counter : int = 0
-        self.reader_thread = None
+        self.readerThread = None
 
     def datachange_notification(self, node, val, data):
         print(f"Change state value in node:{node}")
@@ -26,35 +28,44 @@ class DataChangeHandler(object):
         elif node == finishNode:
             self.finishNode = val
             self.finishProcess()
+
+        elif node == getBoxesNode:
+            self.getBoxesNode = val
+            self.getBoxes()
         
 
     def startProcess(self):
-        if self.startNode == True:
-            self.reader_thread = threading.Thread(target=self.reader.realTime)
-            self.reader_thread.start()
+        if self.startNode:
+            if self.readerThread is None or not self.readerThread.is_alive():
+                self.readerThread = threading.Thread(target=self.reader.realTime)
+                self.readerThread.start()
 
         else:
             print("Start value: False")
 
+    def getBoxes(self):
+        if self.getBoxes:
+            arrayBoxes = self.reader.getContentList()
+            print(arrayBoxes)
+
+        else:
+            pass
     def finishProcess(self):
         if self.finishNode == True:
-            if self.reader_thread is not None and self.reader_thread.is_alive():
+            if self.readerThread is not None and self.readerThread.is_alive():
                 self.reader.stop()
-                self.reader_thread.join()
-        
-            # self.reader_thread = threading.Thread(target=self.reader.stop)
-            # self.reader_thread.stop()
-            # self.reader_thread.join()
-            #self.reader.stop()
+                self.readerThread.join()
         else:
             print("Finish value: False")
 
-def visionCallback(content):
+def Callback(content):
     print(f"QR detected, Content:{content}")
-    #Send 1
-    readNode.set_value(1)
+        #Send 1
+    print('1')
+        # readNode.set_value(1)
     sleep(1)  # Esperar 1 segundo
-    # Send 0
+        # Send 0
+    print('2')
 
 try:
     client.connect()
@@ -66,6 +77,10 @@ try:
     startNode = client.get_node("ns=1;s=Start")
     handleStart = subscription.subscribe_data_change(startNode)
 
+    #get boxes node
+    getBoxesNode = client.get_node("ns=4;s=getBoxesNode")
+    handleBoxes = subscription.subscribe_data_change(getBoxesNode)
+
     readNode = client.get_node("ns=3;s=ReadNode") 
     
     #Finish node
@@ -76,7 +91,8 @@ try:
 
 finally:
     subscription.unsubscribe(handleStart)
-    subscription.unsubscribe(handleFinish)
+    subscription.unsubscribe(handleBoxes)
+    subscription.unsubscribe(handleStart)
     client.disconnect()
     
     print("Connection OPC-UA disconnected successfully")
