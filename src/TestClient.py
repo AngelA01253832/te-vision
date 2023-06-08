@@ -5,15 +5,16 @@ import threading
 from decouple import config
 
 import asyncio
-
+config
 client = Client(config('OPC_ENDPOINT'))
 
 class DataChangeHandler(object):
-    def __init__(self):
+
+    def __init__(self, Callback):
         self.startNode : bool = False
         self.finishNode : bool = False
         self.isBoxReaded : bool = False
-        self.reader = Reader()
+        self.reader = Reader(Callback)
         self.counter : int = 0
         self.readerThread = None
 
@@ -60,18 +61,15 @@ class DataChangeHandler(object):
 
 def Callback(content):
     print(f"QR detected, Content:{content}")
-        #Send 1
-    print('1')
-        # readNode.set_value(1)
-    sleep(1)  # Esperar 1 segundo
-        # Send 0
-    print('2')
+    isBoxReadedNode.set_value(True)
+    sleep(1)
+    isBoxReadedNode.set_value(False)
 
 try:
     client.connect()
     print("Connection OPC-UA established successfully")
     #Create subscription object
-    handler = DataChangeHandler()
+    handler = DataChangeHandler(Callback)
     subscription = client.create_subscription(500, handler)
     #Start node
     startNode = client.get_node("ns=1;s=Start")
@@ -81,7 +79,7 @@ try:
     getBoxesNode = client.get_node("ns=4;s=getBoxesNode")
     handleBoxes = subscription.subscribe_data_change(getBoxesNode)
 
-    readNode = client.get_node("ns=3;s=ReadNode") 
+    isBoxReadedNode = client.get_node("ns=3;s=ReadNode") 
     
     #Finish node
     finishNode = client.get_node("ns=2;s=Finish")
