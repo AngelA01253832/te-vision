@@ -1,12 +1,18 @@
+from array import array
+import json
 from opcua import Client
 from time import sleep
 from CodeLector import Reader
 import threading
 from decouple import config
+import datetime
+from Fetcher import AsyncFetcher
 
 import asyncio
 config
 client = Client(config('OPC_ENDPOINT'))
+FetcherPallet = AsyncFetcher(config('WEB_API_PALLET'))
+FetcherBoxes = AsyncFetcher(config('WEB_API_BOXES'))
 
 class DataChangeHandler(object):
 
@@ -45,9 +51,30 @@ class DataChangeHandler(object):
             print("Start value: False")
 
     def getBoxes(self):
-        if self.getBoxes:
+        if self.getBoxesNode:
             arrayBoxes = self.reader.getContentList()
-            print(arrayBoxes)
+            today = datetime.date.today()
+            todayParse = today.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+ 
+            payload = {
+                "date" : todayParse,
+                "status" : "completed",
+                "time" : 120,
+                "noStopEmergency" : 0,
+                "userId" : "clihuvji30000wc500smn5hfu"
+            }
+            
+            palletResponse = asyncio.run(FetcherPallet.postRequest(payload))
+            palletId = palletResponse.json()['data']['pallet']['id']
+            
+            if palletId:
+                for box in arrayBoxes:
+                    vendorCodeParse = str(box["vendorCode"])
+                    box["palletId"] = palletId
+                    box["vendorCode"] = vendorCodeParse
+                boxResponse = asyncio.run(FetcherBoxes.postRequest(arrayBoxes))
+            
+                print(boxResponse.json())
 
         else:
             pass

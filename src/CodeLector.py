@@ -62,16 +62,7 @@ class Reader:
         if self.camera is not None:
             self.camera.release()
         cv2.destroyAllWindows()
-state = False 
+# state = False 
 
-def visionCallback(content):
-
-
-    global state 
-    print(f"State:1 {state}")    
-    print(f"QR detected, Content:{content}")
-    state = True
-    print(f"State:2 {state}")    
-    sleep(1)  
-    state = False
-    print(f"State:3 {state}")
+# code = Reader()
+# code.realTime()
